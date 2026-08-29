@@ -1,0 +1,15 @@
+pandas
+numpy
+plotly
+dash
+dash-bootstrap-components
+scikit-learn
+openpyxl
+seaborn
+matplotlib
+marimo 
+duckdb 
+pygwalker 
+ydata-profiling 
+dtale 
+great-tables 
