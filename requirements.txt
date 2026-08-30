@@ -12,4 +12,5 @@ duckdb
 pygwalker 
 ydata-profiling 
 dtale 
-great-tables 
+great-tables
+streamlit
