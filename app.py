@@ -747,15 +747,15 @@ with tab3:
     if "จำนวนใบสมัคร" in matrix_metric:
         df_mat = get_cross_round_department_matrix(df_choices, metric="applications", pass_mode=pass_mode)
         val_cols = ["รอบที่ 1", "รอบที่ 2", "รอบที่ 3", "รอบที่ 4"]
-        scale = "Blues"
+        scale = [[0, "#F8FAFC"], [0.25, "#E0F2FE"], [0.5, "#BAE6FD"], [0.75, "#7DD3FC"], [1.0, "#38BDF8"]]
     elif "จำนวนผู้ผ่าน" in matrix_metric:
         df_mat = get_cross_round_department_matrix(df_choices, metric="passed", pass_mode=pass_mode)
         val_cols = ["รอบที่ 1", "รอบที่ 2", "รอบที่ 3", "รอบที่ 4"]
-        scale = "Greens"
+        scale = [[0, "#F8FAFC"], [0.25, "#ECFDF5"], [0.5, "#A7F3D0"], [0.75, "#6EE7B7"], [1.0, "#34D399"]]
     else:
         df_mat = get_cross_round_department_matrix(df_choices, metric="pass_rate", pass_mode=pass_mode)
         val_cols = ["รอบที่ 1 (%)", "รอบที่ 2 (%)", "รอบที่ 3 (%)", "รอบที่ 4 (%)"]
-        scale = "Purples"
+        scale = [[0, "#F8FAFC"], [0.25, "#FDF2F8"], [0.5, "#FBCFE8"], [0.75, "#F472B6"], [1.0, "#EC4899"]]
 
     heatmap_data = df_mat.set_index("ฝ่าย")[val_cols]
     fig_heatmap = px.imshow(
@@ -767,6 +767,11 @@ with tab3:
         text_auto=True,
         aspect="auto",
         title=f"Heatmap เปรียบเทียบ {matrix_metric} รายฝ่าย (รอบที่ 1 - 4)",
+    )
+    fig_heatmap.update_traces(
+        xgap=4,
+        ygap=4,
+        textfont=dict(family="Sarabun", size=13, color="#0F172A"),
     )
     fig_heatmap.update_layout(
         template="plotly_white",

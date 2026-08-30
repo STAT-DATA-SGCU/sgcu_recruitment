@@ -773,6 +773,24 @@
                     </div>
                 </div>
                 <div id="chartHeatmap" style="height:450px;"></div>
+                <details class="st-expander" style="margin-top:14px;">
+                    <summary>📄 ดูตาราง Matrix รายละเอียด</summary>
+                    <div class="expander-content">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ฝ่าย</th>
+                                    <th style="text-align:center;">รอบที่ 1</th>
+                                    <th style="text-align:center;">รอบที่ 2</th>
+                                    <th style="text-align:center;">รอบที่ 3</th>
+                                    <th style="text-align:center;">รอบที่ 4</th>
+                                    <th style="text-align:right;" id="matrixTotalColHeader">รวม 4 รอบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableMatrixBody"></tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
 
             <div class="sidebar-divider" style="margin-bottom:24px;"></div>
@@ -1417,31 +1435,168 @@
             const depts = RAW_DATA.departments;
             const rounds = ['รอบที่ 1', 'รอบที่ 2', 'รอบที่ 3', 'รอบที่ 4'];
             
-            const matrixZ = depts.map(d => {
-                return [1, 2, 3, 4].map(r => {
-                    const subset = RAW_DATA.choices.filter(c => c.department === d && c.round === r);
-                    if (metric === 'applications') return subset.length;
-                    if (metric === 'passed') return subset.filter(c => c[passCol]).length;
-                    if (metric === 'pass_rate') {
-                        const passed = subset.filter(c => c[passCol]).length;
-                        return subset.length > 0 ? parseFloat(((passed / subset.length) * 100).toFixed(1)) : 0;
-                    }
-                    return 0;
-                });
+            // Compute statistics for each department across rounds 1-4
+            const deptStats = depts.map(d => {
+                const r1_apps = RAW_DATA.choices.filter(c => c.department === d && c.round === 1).length;
+                const r2_apps = RAW_DATA.choices.filter(c => c.department === d && c.round === 2).length;
+                const r3_apps = RAW_DATA.choices.filter(c => c.department === d && c.round === 3).length;
+                const r4_apps = RAW_DATA.choices.filter(c => c.department === d && c.round === 4).length;
+                const total_apps = r1_apps + r2_apps + r3_apps + r4_apps;
+
+                const r1_pass = RAW_DATA.choices.filter(c => c.department === d && c.round === 1 && c[passCol]).length;
+                const r2_pass = RAW_DATA.choices.filter(c => c.department === d && c.round === 2 && c[passCol]).length;
+                const r3_pass = RAW_DATA.choices.filter(c => c.department === d && c.round === 3 && c[passCol]).length;
+                const r4_pass = RAW_DATA.choices.filter(c => c.department === d && c.round === 4 && c[passCol]).length;
+                const total_pass = r1_pass + r2_pass + r3_pass + r4_pass;
+
+                const r1_rate = r1_apps > 0 ? parseFloat(((r1_pass / r1_apps) * 100).toFixed(1)) : 0;
+                const r2_rate = r2_apps > 0 ? parseFloat(((r2_pass / r2_apps) * 100).toFixed(1)) : 0;
+                const r3_rate = r3_apps > 0 ? parseFloat(((r3_pass / r3_apps) * 100).toFixed(1)) : 0;
+                const r4_rate = r4_apps > 0 ? parseFloat(((r4_pass / r4_apps) * 100).toFixed(1)) : 0;
+                const total_rate = total_apps > 0 ? parseFloat(((total_pass / total_apps) * 100).toFixed(1)) : 0;
+
+                return {
+                    dept: d,
+                    apps: [r1_apps, r2_apps, r3_apps, r4_apps],
+                    passed: [r1_pass, r2_pass, r3_pass, r4_pass],
+                    rate: [r1_rate, r2_rate, r3_rate, r4_rate],
+                    total_apps: total_apps,
+                    total_pass: total_pass,
+                    total_rate: total_rate
+                };
             });
+
+            // Sort by selected metric descending
+            if (metric === 'applications') {
+                deptStats.sort((a, b) => b.total_apps - a.total_apps);
+            } else if (metric === 'passed') {
+                deptStats.sort((a, b) => b.total_pass - a.total_pass);
+            } else {
+                deptStats.sort((a, b) => b.total_rate - a.total_rate);
+            }
+
+            // Reverse for Plotly y-axis so top department is at top
+            const displayDepts = [...deptStats].reverse();
+            const yLabels = displayDepts.map(d => d.dept);
+
+            const matrixZ = displayDepts.map(d => {
+                if (metric === 'applications') return d.apps;
+                if (metric === 'passed') return d.passed;
+                return d.rate;
+            });
+
+            const textMatrix = displayDepts.map(d => {
+                if (metric === 'applications') return d.apps.map(v => String(v));
+                if (metric === 'passed') return d.passed.map(v => String(v));
+                return d.rate.map(v => v > 0 ? v + '%' : '0%');
+            });
+
+            // Soft Light Pastel Colorscales (for maximum text legibility & clean white aesthetic)
+            let colorscale;
+            if (metric === 'applications') {
+                colorscale = [
+                    [0, '#F8FAFC'],
+                    [0.25, '#E0F2FE'],
+                    [0.5, '#BAE6FD'],
+                    [0.75, '#7DD3FC'],
+                    [1.0, '#38BDF8']
+                ];
+            } else if (metric === 'passed') {
+                colorscale = [
+                    [0, '#F8FAFC'],
+                    [0.25, '#ECFDF5'],
+                    [0.5, '#A7F3D0'],
+                    [0.75, '#6EE7B7'],
+                    [1.0, '#34D399']
+                ];
+            } else {
+                colorscale = [
+                    [0, '#F8FAFC'],
+                    [0.25, '#FDF2F8'],
+                    [0.5, '#FBCFE8'],
+                    [0.75, '#F472B6'],
+                    [1.0, '#EC4899']
+                ];
+            }
+
+            // Clean bold dark text on all soft pastel cells (100% crystal clear legibility)
+            const annotations = [];
+            for (let i = 0; i < displayDepts.length; i++) {
+                for (let j = 0; j < rounds.length; j++) {
+                    const textVal = textMatrix[i][j];
+                    annotations.push({
+                        x: rounds[j],
+                        y: yLabels[i],
+                        text: `<b>${textVal}</b>`,
+                        font: {
+                            family: 'Sarabun',
+                            size: 13,
+                            color: '#0F172A'
+                        },
+                        showarrow: false
+                    });
+                }
+            }
 
             Plotly.react('chartHeatmap', [{
                 z: matrixZ,
                 x: rounds,
-                y: depts,
+                y: yLabels,
                 type: 'heatmap',
-                colorscale: 'Purp',
+                colorscale: colorscale,
+                xgap: 4,
+                ygap: 4,
+                showscale: true,
+                colorbar: {
+                    len: 0.85,
+                    thickness: 12,
+                    outlinewidth: 0,
+                    tickfont: { family: 'Sarabun', size: 10 }
+                },
                 hoverongaps: false
             }], {
+                annotations: annotations,
                 margin: { t: 20, b: 30, l: 190, r: 20 },
                 paper_bgcolor: '#FFFFFF',
+                plot_bgcolor: '#FFFFFF',
                 font: { family: 'Sarabun', size: 11 }
             }, { responsive: true, displayModeBar: false });
+
+            // Populate Matrix Table in Expander
+            const tableBody = document.getElementById('tableMatrixBody');
+            const totalColHeader = document.getElementById('matrixTotalColHeader');
+            if (tableBody && totalColHeader) {
+                tableBody.innerHTML = '';
+                if (metric === 'applications') {
+                    totalColHeader.textContent = 'รวม 4 รอบ';
+                } else if (metric === 'passed') {
+                    totalColHeader.textContent = 'รวมผ่าน 4 รอบ';
+                } else {
+                    totalColHeader.textContent = 'อัตราผ่านรวม (%)';
+                }
+
+                deptStats.forEach(d => {
+                    let r1, r2, r3, r4, tot;
+                    if (metric === 'applications') {
+                        r1 = d.apps[0]; r2 = d.apps[1]; r3 = d.apps[2]; r4 = d.apps[3]; tot = d.total_apps;
+                    } else if (metric === 'passed') {
+                        r1 = d.passed[0]; r2 = d.passed[1]; r3 = d.passed[2]; r4 = d.passed[3]; tot = d.total_pass;
+                    } else {
+                        r1 = d.rate[0] + '%'; r2 = d.rate[1] + '%'; r3 = d.rate[2] + '%'; r4 = d.rate[3] + '%'; tot = d.total_rate + '%';
+                    }
+
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:700;">${d.dept}</td>
+                            <td style="text-align:center;">${r1}</td>
+                            <td style="text-align:center;">${r2}</td>
+                            <td style="text-align:center;">${r3}</td>
+                            <td style="text-align:center;">${r4}</td>
+                            <td style="text-align:right; font-weight:700; color:#E03177;">${tot}</td>
+                        </tr>
+                    `;
+                });
+            }
         }
 
         // Render Tab 4 (Data Explorer)
