@@ -48,6 +48,19 @@ st.markdown("""
         color: #0F172A;
     }
     
+    /* Hide Streamlit Toolbar, Decoration & Header completely */
+    [data-testid="stToolbar"], 
+    .stAppToolbar, 
+    .st-emotion-cache-14vh5up, 
+    .e1yxiy6j2, 
+    header[data-testid="stHeader"], 
+    #MainMenu, 
+    footer {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+    }
+
     /* Main Background & Spacing */
     .block-container {
         padding-top: 1.2rem;
@@ -803,23 +816,27 @@ with tab3:
 
 
 # ==============================================================================
-# TAB 4: DATA EXPLORER & EXPORT
+# TAB 4: DATA EXPLORER & EXPORT (ANONYMIZED)
 # ==============================================================================
 with tab4:
-    st.markdown("#### 📋 ค้นหาและสืบค้นข้อมูลรายบุคคล (Data Explorer)")
+    st.markdown("#### 📋 สืบค้นข้อมูลรายบุคคลแบบนิรนาม (Anonymized Data Explorer)")
+    st.caption("🔒 ปลอดข้อมูลส่วนบุคคล 100% (ลบชื่อ-สกุล, รหัสนิสิต, อีเมล ออกทั้งหมดแล้ว)")
 
-    search_query = st.text_input("🔍 ค้นหาด้วยชื่อ, รหัสนิสิต, คณะ, หรือฝ่าย:", placeholder="พิมพ์คำค้นหา เช่น วิศวะ, นายก, ชื่อนิสิต, รหัสนิสิต...")
+    search_query = st.text_input("🔍 ค้นหาด้วยรหัสผู้สมัคร, คณะ, ชั้นปี, หรือชื่อฝ่าย:", placeholder="พิมพ์คำค้นหา เช่น ผู้สมัคร #010, วิศวะ, นายก, ชั้นปี...")
 
-    df_view = filtered_app[[
-        "round_label", "name", "student_id", "faculty", "year",
+    # Assign anonymized ID
+    filtered_app_display = filtered_app.copy()
+    filtered_app_display["applicant_id"] = [f"ผู้สมัคร #{i+1:03d}" for i in range(len(filtered_app_display))]
+
+    df_view = filtered_app_display[[
+        "applicant_id", "round_label", "faculty", "year",
         "dept_choice_1", "subdept_choice_1", "status_clean_1",
         "dept_choice_2", "subdept_choice_2", "status_clean_2"
     ]].copy()
 
     df_view.rename(columns={
+        "applicant_id": "รหัสผู้สมัคร",
         "round_label": "รอบ",
-        "name": "ชื่อ-สกุล",
-        "student_id": "รหัสนิสิต",
         "faculty": "คณะ",
         "year": "ชั้นปี",
         "dept_choice_1": "ฝ่ายอันดับ 1",
@@ -832,9 +849,9 @@ with tab4:
 
     if search_query:
         mask = (
-            df_view["ชื่อ-สกุล"].str.contains(search_query, case=False, na=False) |
-            df_view["รหัสนิสิต"].str.contains(search_query, case=False, na=False) |
+            df_view["รหัสผู้สมัคร"].str.contains(search_query, case=False, na=False) |
             df_view["คณะ"].str.contains(search_query, case=False, na=False) |
+            df_view["ชั้นปี"].str.contains(search_query, case=False, na=False) |
             df_view["ฝ่ายอันดับ 1"].str.contains(search_query, case=False, na=False) |
             df_view["ฝ่ายอันดับ 2"].str.contains(search_query, case=False, na=False)
         )
@@ -850,7 +867,7 @@ with tab4:
         st.download_button(
             label="📥 ดาวน์โหลดข้อมูลเป็น CSV (utf-8-sig)",
             data=csv_buffer,
-            file_name="sgcu_recruitment_filtered.csv",
+            file_name="sgcu_recruitment_anonymized.csv",
             mime="text/csv",
         )
     with d_col2:
@@ -860,7 +877,7 @@ with tab4:
         st.download_button(
             label="📊 ดาวน์โหลดข้อมูลเป็น Excel (.xlsx)",
             data=excel_buffer.getvalue(),
-            file_name="sgcu_recruitment_filtered.xlsx",
+            file_name="sgcu_recruitment_anonymized.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 

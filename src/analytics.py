@@ -272,14 +272,13 @@ def get_reapplicant_analysis(df_applicants: pd.DataFrame) -> tuple[pd.DataFrame,
         "applied_4_rounds": int((name_counts["num_rounds"] == 4).sum()),
     }
 
+    reapplicants["รหัสผู้สมัครนิรนาม"] = [f"ผู้สมัครซ้ำ #{i+1:02d}" for i in range(len(reapplicants))]
     reapplicants.rename(columns={
-        "name": "ชื่อ-สกุล",
-        "student_id": "รหัสนิสิต",
         "faculty": "คณะ",
         "num_rounds": "จำนวนรอบที่สมัคร",
         "rounds_applied_str": "รอบที่สมัคร",
         "passed_any": "เคยผ่านการคัดเลือก",
     }, inplace=True)
 
-    return reapplicants[["ชื่อ-สกุล", "รหัสนิสิต", "คณะ", "จำนวนรอบที่สมัคร", "รอบที่สมัคร", "เคยผ่านการคัดเลือก"]], stats
+    return reapplicants[["รหัสผู้สมัครนิรนาม", "คณะ", "จำนวนรอบที่สมัคร", "รอบที่สมัคร", "เคยผ่านการคัดเลือก"]], stats
 
