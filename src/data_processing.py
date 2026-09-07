@@ -4,6 +4,7 @@ Data Processing and Cleansing Module for SGCU Recruitment Data (Rounds 1-4).
 
 import os
 import glob
+import re
 import unicodedata
 import pandas as pd
 import numpy as np
@@ -91,15 +92,58 @@ def parse_pass_status(status: str) -> dict:
     }
 
 
-def clean_year(year_val) -> str:
-    """Standardizes academic year."""
-    if pd.isna(year_val):
+def clean_faculty(fac_text) -> str:
+    """Cleans and standardizes faculty names, stripping leading code numbers."""
+    s = normalize_text(fac_text)
+    if not s:
         return "ไม่ระบุ"
-    s = str(year_val).strip()
-    s = s.replace(".0", "")
-    if s in ["1", "2", "3", "4", "5", "6"]:
-        return f"ปี {s}"
-    return s if s else "ไม่ระบุ"
+    s = re.sub(r"^\d+\s*", "", s)
+    s = s.replace("สถาบันนวัตกรรมบูรณาการแห่งจุฬาฯ (BAScii)", "สถาบันนวัตกรรมบูรณาการแห่งจุฬาลงกรณ์มหาวิทยาลัย")
+    s = s.replace("สถาบันนวัตกรรมบูรณาการแห่งจุฬาลงกรณ์มหาวิทยาลัย (BAScii)", "สถาบันนวัตกรรมบูรณาการแห่งจุฬาลงกรณ์มหาวิทยาลัย")
+    return s.strip()
+
+
+def normalize_department(dept_text) -> str:
+    """Maps numeric or variant department names to canonical SGCU department names."""
+    s = normalize_text(dept_text)
+    if not s:
+        return ""
+    dept_map = {
+        "1": "นายกสโมสรนิสิต",
+        "2": "อุปนายกคนที่ 1",
+        "3": "อุปนายกคนที่ 2",
+        "4": "ฝ่ายวิชาการ",
+        "5": "พัฒนาสังคมและบำเพ็ญประโยชน์",
+        "6": "ฝ่ายศิลปะและวัฒนธรรม",
+        "7": "กีฬา",
+        "8": "นิสิตสัมพันธ์",
+        "9": "เหรัญญิก",
+        "10": "เลขานุการ",
+    }
+    s_clean = s.replace(".0", "")
+    if s_clean in dept_map:
+        return dept_map[s_clean]
+    if s == "วิชาการ":
+        return "ฝ่ายวิชาการ"
+    if s == "ฝ่ายกีฬา":
+        return "กีฬา"
+    return s
+
+
+def clean_year(year_val, student_id: str = "") -> str:
+    """Standardizes academic year, falling back to derivation from student_id."""
+    if pd.notna(year_val):
+        s = str(year_val).strip().replace(".0", "")
+        if s in ["1", "2", "3", "4", "5", "6"]:
+            return f"ปี {s}"
+        if s.startswith("ปี "):
+            return s
+    sid = str(student_id).strip().replace(".0", "")
+    if len(sid) >= 2 and sid[:2].isdigit():
+        yr_num = 2569 - (2500 + int(sid[:2])) + 1
+        if 1 <= yr_num <= 6:
+            return f"ปี {yr_num}"
+    return "ไม่ระบุ"
 
 
 def load_raw_data(data_dir: str = "data") -> tuple[dict, dict]:
@@ -139,13 +183,15 @@ def process_all_recruitment_data(data_dir: str = "data") -> tuple[pd.DataFrame, 
         if q_df is None:
             continue
 
-        # Build lookup map for results
+        # Build lookup map for results (use list to properly handle multiple submissions by same person)
         res_map = {}
         if res_df is not None:
             for _, rrow in res_df.iterrows():
                 name = normalize_text(rrow.get("ชื่อ-สกุล (ไม่ต้องมีคำนำหน้า)", ""))
                 if name:
-                    res_map[name] = rrow
+                    if name not in res_map:
+                        res_map[name] = []
+                    res_map[name].append(rrow)
 
         # Column name variants
         d1_col = "ฝ่ายหลักลำดับที่ 1"
@@ -157,19 +203,22 @@ def process_all_recruitment_data(data_dir: str = "data") -> tuple[pd.DataFrame, 
             raw_name = qrow.get("ชื่อ-สกุล (ไม่ต้องมีคำนำหน้า)", "")
             name = normalize_text(raw_name)
             student_id = normalize_text(qrow.get("รหัสนิสิต", ""))
-            faculty = normalize_text(qrow.get("คณะ", ""))
-            year = clean_year(qrow.get("ชั้นปีการศึกษา", ""))
+            faculty = clean_faculty(qrow.get("คณะ", ""))
+            year = clean_year(qrow.get("ชั้นปีการศึกษา", ""), student_id)
 
             # Choice 1
-            dept1 = normalize_text(qrow.get(d1_col, ""))
+            dept1 = normalize_department(qrow.get(d1_col, ""))
             subdept1 = normalize_text(qrow.get(sd1_col, ""))
 
             # Choice 2
-            dept2 = normalize_text(qrow.get(d2_col, ""))
+            dept2 = normalize_department(qrow.get(d2_col, ""))
             subdept2 = normalize_text(qrow.get(sd2_col, ""))
 
             # Result lookups
-            res_row = res_map.get(name)
+            res_row = None
+            if name in res_map and len(res_map[name]) > 0:
+                res_row = res_map[name].pop(0)
+
             raw_status1 = ""
             raw_status2 = ""
             email = ""

@@ -22,9 +22,9 @@ from src.analytics import (
 
 def test_data_pipeline():
     df_app, df_ch = process_all_recruitment_data("data")
-    assert len(df_app) == 527, f"Expected 527 applicants, got {len(df_app)}"
-    assert len(df_ch) == 725, f"Expected 725 choice applications, got {len(df_ch)}"
-    print("[PASS] test_data_pipeline: 527 applicants, 725 choices validated.")
+    assert len(df_app) == 531, f"Expected 531 applicants, got {len(df_app)}"
+    assert len(df_ch) == 729, f"Expected 729 choice applications, got {len(df_ch)}"
+    print("[PASS] test_data_pipeline: 531 applicants, 729 choices validated.")
 
 
 def test_analytics_metrics():
@@ -32,8 +32,8 @@ def test_analytics_metrics():
 
     # Overall summary
     sum_all = get_overall_summary(df_app, df_ch)
-    assert sum_all["total_applications"] == 527
-    assert sum_all["unique_applicants"] == 478
+    assert sum_all["total_applications"] == 531
+    assert sum_all["unique_applicants"] == 481
     print(f"[PASS] test_analytics_metrics: Overall summary validated: {sum_all}")
 
     # Year ranking
