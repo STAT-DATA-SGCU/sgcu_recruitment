@@ -275,9 +275,9 @@ with st.sidebar:
     st.markdown("""
     <div style='background-color:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; padding:12px; font-size:0.8rem; color:#475569;'>
         <b>📌 แหล่งข้อมูล:</b> อบจ. จุฬาฯ รอบ 1-4<br>
-        <b>👥 ผู้สมัครรวม:</b> 527 คน-ครั้ง<br>
-        <b>👤 ไม่ซ้ำคน:</b> 478 คน (สมัครซ้ำ 44 คน)<br>
-        <b>📝 ใบสมัครฝ่าย:</b> 725 อันดับ
+        <b>👥 ผู้สมัครรวม:</b> 531 คน-ครั้ง<br>
+        <b>👤 ไม่ซ้ำคน:</b> 481 คน (สมัครซ้ำ 44 คน)<br>
+        <b>📝 ใบสมัครฝ่าย:</b> 729 อันดับ
     </div>
     """, unsafe_allow_html=True)
 
